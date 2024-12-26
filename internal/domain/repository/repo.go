@@ -10,7 +10,7 @@ type UserRepository interface {
 	SetWeight(id int64, weight float64) error
 	SetReps(id int64, reps int) error
 	SetExercise(id int64, exercise string) error
-	AddExercise(id int64, exercise string) error // Исправил параметр на 'exercise'
+	AddExercise(id int64, exercise string) error
 	UserCheck(id int64) (bool, error)
 	IsExerciseChoosen(id int64) (bool, error)
 	RegisterUser(id int64) error
