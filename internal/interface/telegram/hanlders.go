@@ -5,8 +5,20 @@ import (
 	"fmt"
 	"gopkg.in/telebot.v3"
 	"log/slog"
+	"regexp"
 	"strconv"
 	"strings"
+)
+
+const (
+	weightRegex = `^([1-9]\d*|0)(\.\d+)?([eE][+-]?\d+)?$`
+	repsRegex   = `^(0|[1-9]\d*)$`
+)
+
+var (
+	repsRegexp = regexp.MustCompile(repsRegex)
+
+	weightRegexp = regexp.MustCompile(weightRegex)
 )
 
 type BotHandler struct {
@@ -79,6 +91,9 @@ func (b *BotHandler) DataHandler(c telebot.Context) error {
 			b.EndSetHandler(c)
 		case "choose_exercise":
 			c.Edit("Выберите упражнение", b.PagKeyboard(c.Sender().ID, 1))
+		case "show_stats":
+			//хендлер статистики
+
 		}
 	}
 
@@ -171,43 +186,58 @@ func (b *BotHandler) EndSetHandler(c telebot.Context) error {
 
 func (b *BotHandler) WeightHandler(c telebot.Context) error {
 
-	msg := c.Message().Text
+	msg := strings.ReplaceAll(c.Message().Text, ",", ".")
 
-	if strings.ContainsAny(msg, ",") {
-		msg = strings.ReplaceAll(msg, ",", ".")
-	}
+	if weightRegexp.MatchString(msg) {
 
-	weight, err := strconv.ParseFloat(msg, 64)
-	if err != nil {
-		c.Edit("Ошибка ввода веса. Пожалуйста, введите число c одной цифрой после запятой(точка тож сойдет).")
+		slog.AnyValue("Вошло в иф")
+
+		weight, err := strconv.ParseFloat(msg, 64)
+		if err != nil {
+			slog.Error("parse float error:", err)
+			c.Send("Ошибка ввода веса. Пожалуйста, введите число c одной цифрой после запятой(точка тож сойдет).")
+			c.Bot().Handle(telebot.OnText, b.WeightHandler)
+		}
+
+		err = b.Service.Repo.SetWeight(c.Sender().ID, weight)
+		if err != nil {
+			slog.Error("set weight err:", err)
+			return err
+		}
+
+		c.Send("Теперь введите количество пfовторений.")
+		c.Bot().Handle(telebot.OnText, b.RepsHandler)
+
+	} else if !weightRegexp.MatchString(msg) {
+		slog.AnyValue("вошло в элс")
+
+		c.Send("Ошибка ввода веса. Пожалуйста, введите число c одной цифрой после запятой(точка тож сойдет).")
+
 		c.Bot().Handle(telebot.OnText, b.WeightHandler)
 	}
 
-	err = b.Service.Repo.SetWeight(c.Sender().ID, weight)
-
-	if err != nil {
-		slog.Error("set weight err:", err)
-		return err
-	}
-
-	c.Send("Теперь введите количество повторений.")
-	c.Bot().Handle(telebot.OnText, b.RepsHandler)
-
 	return nil
-
 }
 
 func (b *BotHandler) RepsHandler(c telebot.Context) error {
 
-	reps, err := strconv.Atoi(c.Message().Text)
-	if err != nil {
-		c.Edit("Ошибка ввода повторений. Пожалуйста, введите целое число.")
+	if repsRegexp.MatchString(c.Message().Text) {
+
+		reps, err := strconv.Atoi(c.Message().Text)
+		if err != nil {
+			c.Send("Ошибка ввода повторений. Пожалуйста, введите целое число.")
+			c.Bot().Handle(telebot.OnText, b.RepsHandler)
+		}
+
+		b.Service.Repo.SetReps(c.Sender().ID, reps)
+		c.Send("Сэт успешно завершен! Все данные затреканы!", TrainingKeyboard())
+
+	} else if !repsRegexp.MatchString(c.Message().Text) {
+
+		c.Send("Ошибка ввода повторений. Пожалуйста, введите целое число.")
 		c.Bot().Handle(telebot.OnText, b.RepsHandler)
+
 	}
-
-	b.Service.Repo.SetReps(c.Sender().ID, reps)
-
-	c.Send("Сэт успешно завершен! Все данные затреканы!", TrainingKeyboard())
 
 	return nil
 

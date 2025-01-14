@@ -1,8 +1,12 @@
 package postgres
 
 import (
+	"GymBot/internal"
+	domain "GymBot/internal/domain/entity"
 	"GymBot/internal/domain/repository"
 	"database/sql"
+	"fmt"
+	"github.com/xuri/excelize/v2"
 	"log"
 	"log/slog"
 	"time"
@@ -373,4 +377,377 @@ func (u *UserRepositoryDB) IsTrainingActive(id int64) (bool, error) {
 	}
 
 	return count > 0, nil
+}
+
+func (u *UserRepositoryDB) GetMostPopularExercise(id int64) (string, error) {
+	q := squirrel.Select("exercise_name").
+		From("exercises").
+		GroupBy("exercise_name").
+		OrderBy("COUNT(*) DESC").
+		Limit(1).PlaceholderFormat(squirrel.Dollar)
+	query, args, err := q.ToSql()
+	if err != nil {
+		slog.Error("GetMostPopularExercise ToSql Error:", err)
+		return "", err
+	}
+
+	var exercise string
+
+	err = u.Db.QueryRow(query, args...).Scan(&exercise)
+	if err != nil {
+		slog.Error("GetMostPopularExercise QueryRow Error:", err)
+		return "", err
+	}
+
+	return exercise, nil
+
+}
+func (u *UserRepositoryDB) GetLeastPopularExercise(id int64) (string, error) {
+
+	q := squirrel.Select("exercise_name").
+		From("exercises").
+		GroupBy("exercise_name").
+		OrderBy("COUNT(*) ASC").
+		Limit(1).PlaceholderFormat(squirrel.Dollar)
+	query, args, err := q.ToSql()
+	if err != nil {
+		slog.Error("GetMostPopularExercise ToSql Error:", err)
+		return "", err
+	}
+
+	var exercise string
+
+	err = u.Db.QueryRow(query, args...).Scan(&exercise)
+	if err != nil {
+		slog.Error("GetMostPopularExercise QueryRow Error:", err)
+		return "", err
+	}
+
+	return exercise, nil
+}
+
+func (u *UserRepositoryDB) GetAverageWeight(id int64, exercise string) (float64, error) {
+	q := squirrel.Select("AVG(weight)").From("sets").Where(squirrel.Eq{"user_id": id}).PlaceholderFormat(squirrel.Dollar)
+
+	query, args, err := q.ToSql()
+	if err != nil {
+		slog.Error("GetAverageWeight ToSql Error:", err)
+		return 0, err
+	}
+	var weight float64
+
+	err = u.Db.QueryRow(query, args...).Scan(&weight)
+	if err != nil {
+		slog.Error("GetAverageWeight QueryRow Error:", err)
+		return 0, err
+	}
+
+	return weight, nil
+}
+func (u *UserRepositoryDB) GetAverageReps(id int64, exercise string) (int, error) {
+
+	q := squirrel.Select("AVG(reps)").From("sets").Where(squirrel.Eq{"user_id": id}).PlaceholderFormat(squirrel.Dollar)
+
+	query, args, err := q.ToSql()
+	if err != nil {
+		slog.Error("GetAverageReps ToSql Error:", err)
+		return 0, err
+	}
+
+	var reps int
+
+	err = u.Db.QueryRow(query, args...).Scan(&reps)
+	if err != nil {
+		slog.Error("GetAverageReps QueryRow Error:", err)
+		return 0, err
+	}
+
+	return reps, nil
+
+}
+
+func (u *UserRepositoryDB) GetAverageTrainingsLenght(id int64) (time.Time, error) {
+
+	q := squirrel.Select("(end_time - start_time)").From("trainings").Where(squirrel.Eq{"user_id": id}).PlaceholderFormat(squirrel.Dollar)
+
+	query, args, err := q.ToSql()
+	if err != nil {
+		slog.Error("GetAverageTrainingsLenght ToSql Error:", err)
+		return time.Time{}, err
+	}
+
+	var avgTime time.Time
+
+	err = u.Db.QueryRow(query, args...).Scan(&avgTime)
+	if err != nil {
+		slog.Error("GetAverageTrainingsLenght QueryRow Error:", err)
+		return time.Time{}, err
+	}
+
+	return avgTime, nil
+
+}
+
+func (u *UserRepositoryDB) GetTrainingsCount(id int64) (int64, error) {
+	q := squirrel.Select("COUNT(*)").From("trainings").Where(squirrel.Eq{"user_id": id}).PlaceholderFormat(squirrel.Dollar)
+
+	query, args, err := q.ToSql()
+	if err != nil {
+		slog.Error("GetTrainingsCount ToSql Error:", err)
+		return 0, err
+	}
+
+	var count int64
+
+	err = u.Db.QueryRow(query, args...).Scan(&count)
+	if err != nil {
+		slog.Error("GetTrainingsCount QueryRow Error:", err)
+		return 0, err
+	}
+
+	return count, nil
+
+}
+
+func (u *UserRepositoryDB) GetTotalSetsPerExercise(id int64, exercise string) (int64, error) {
+
+	q := squirrel.Select("COUNT (*)").From("sets").Where(
+		squirrel.And{
+			squirrel.Eq{"user_id": id},
+			squirrel.Eq{"exercise_name": exercise},
+		})
+
+	query, args, err := q.ToSql()
+	if err != nil {
+		slog.Error("GetTotalSetsPerExercise ToSql Error:", err)
+		return 0, err
+	}
+
+	var totalSets int64
+
+	err = u.Db.QueryRow(query, args...).Scan(&totalSets)
+	if err != nil {
+		slog.Error("GetTotalSetsPerExercise QueryRow Error:", err)
+		return 0, err
+	}
+
+	return totalSets, nil
+
+}
+
+func (u *UserRepositoryDB) GetTrainings(id int64) ([]domain.Training, error) {
+	var trainings []domain.Training
+
+	q := squirrel.Select("user_id", "start_time", "end_time").
+		From("trainings").
+		Where(squirrel.Eq{"user_id": id}).OrderBy("start_time").PlaceholderFormat(squirrel.Dollar)
+
+	query, args, err := q.ToSql()
+	if err != nil {
+		slog.Error("GetTrainingsByUserID ToSql Error:", err)
+		return nil, err
+	}
+
+	rows, err := u.Db.Query(query, args...)
+	if err != nil {
+		slog.Error("GetTrainingsByUserID Query Error:", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var training domain.Training
+		if err := rows.Scan(
+			&training.User_id,
+			&training.Start,
+			&training.End,
+		); err != nil {
+			slog.Error("GetTrainingsByUserID Scan Error:", err)
+			return nil, err
+		}
+		trainings = append(trainings, training)
+	}
+
+	if err := rows.Err(); err != nil {
+		slog.Error("GetTrainingsByUserID Rows Error:", err)
+		return nil, err
+	}
+
+	return trainings, nil
+}
+
+func (u *UserRepositoryDB) GetExercises(id int64) ([]string, error) {
+
+	q := squirrel.Select("name").From("exercises").Where(squirrel.Eq{"user_id": id}).PlaceholderFormat(squirrel.Dollar)
+
+	query, args, err := q.ToSql()
+	if err != nil {
+		slog.Error("GetExercises ToSql Error:", err)
+		return nil, err
+	}
+
+	var exercises []string
+
+	err = u.Db.QueryRow(query, args...).Scan(&exercises)
+	if err != nil {
+		slog.Error("GetExercises QueryRow Error:", err)
+		return nil, err
+	}
+	return exercises, nil
+}
+
+func (u *UserRepositoryDB) GetSetsCount(training domain.Training, exercise string) (int64, error) {
+
+	q := squirrel.Select("COUNT(*)").From("sets").Where(squirrel.And{
+		squirrel.Eq{"user_id": training.User_id},
+		squirrel.GtOrEq{"start_time": training.Start},
+		squirrel.LtOrEq{"end_time": training.End},
+		squirrel.Eq{"exercise_name": exercise},
+	}).PlaceholderFormat(squirrel.Dollar)
+
+	query, args, err := q.ToSql()
+	if err != nil {
+		slog.Error("GetSetsCount ToSql Error:", err)
+		return 0, err
+	}
+
+	var count int64
+
+	err = u.Db.QueryRow(query, args...).Scan(&count)
+	if err != nil {
+		slog.Error("GetSetsCount QueryRow Error:", err)
+		return 0, err
+	}
+
+	return count, nil
+
+}
+
+func (u *UserRepositoryDB) GetAverageSetsPerExerise(id int64, exercise string) (float64, error) {
+
+	trainings, err := u.GetTrainings(id)
+	if err != nil {
+		slog.Error("GetTrainings Error:", err)
+		return 0, err
+	}
+
+	var count []int64
+
+	for _, training := range trainings {
+		val, err := u.GetSetsCount(training, exercise)
+		if err != nil {
+			slog.Error("GetSetsCount Error:", err)
+			return 0, err
+		}
+		count = append(count, val)
+	}
+
+	var result int64
+
+	for _, v := range count {
+		result += v
+	}
+
+	return float64(result) / float64(len(count)), nil
+
+}
+
+func (u *UserRepositoryDB) GetAverageExercisesPerTraining(id int64) (float64, error) {
+
+	trainings, err := u.GetTrainings(id)
+	if err != nil {
+		slog.Error("GetTrainings Error:", err)
+		return 0, err
+	}
+
+	var count []int64
+
+	for _, training := range trainings {
+
+		q := squirrel.Select("COUNT(DISTINCT exercise_name)").From("sets").Where(
+			squirrel.And{
+				squirrel.Eq{"user_id": training.User_id},
+				squirrel.GtOrEq{"start_time": training.Start},
+				squirrel.LtOrEq{"end_time": training.End},
+			})
+
+		query, args, err := q.ToSql()
+		if err != nil {
+			slog.Error("Avg exercises per training err: ", err)
+			return 0, err
+		}
+
+		var uniqueExercises int64
+
+		err = u.Db.QueryRow(query, args...).Scan(&uniqueExercises)
+		if err != nil {
+			slog.Error("GetExercises QueryRow Error:", err)
+			return 0, err
+		}
+
+		count = append(count, uniqueExercises)
+	}
+
+	var result float64
+	for _, v := range count {
+		result += float64(v)
+	}
+
+	return result / float64(len(count)), nil
+
+}
+
+func (u *UserRepositoryDB) GenerateExelStats(id int64, user_name string) (excelize.File, error) {
+	stats := excelize.NewFile()
+
+	defer func() {
+		if err := stats.Close(); err != nil {
+			slog.Info("Stats file close err:", err)
+		}
+	}
+
+	sheetName := fmt.Sprintf("Статистика %s", user_name)
+
+	_, err := stats.NewSheet(sheetName)
+	if err != nil {
+		fmt.Println(err)
+		return excelize.File{}, err
+	}
+
+	trainings, err := u.GetTrainings(id)
+	if err != nil {
+		slog.Error("GetTrainings Error:", err)
+		return excelize.File{}, err
+	}
+
+	startDate := internal.FormatDate(trainings[0].Start)
+	endDate := internal.FormatDate(trainings[0].End)
+
+	averageTrainingLenght, err := u.GetAverageTrainingsLenght(id)
+	if err != nil {
+		slog.Error("GetAverageTrainingsLenght Error:", err)
+		return excelize.File{}, err
+	}
+
+	averageExercisesPerTraining, err := u.GetAverageExercisesPerTraining(id)
+	if err != nil {
+		slog.Error("GetAverageExercisesPerTraining Error:", err)
+		return excelize.File{}, err
+	}
+
+	averageSetsPerTraining, err := u.GetAverageSetsPerTraining(id)
+
+	stats.SetCellValue(sheetName, "A3", fmt.Sprintf("Количество тренрировок за с %s по %s", startDate, endDate))
+	stats.SetCellValue(sheetName, "B3", len(trainings))
+	stats.SetCellValue(sheetName, "A5", "СРЕДНЯЯ ПРОДОЛЖИТЕЛЬНОСТЬ ТРЕНИРОВКИ")
+	stats.SetCellValue(sheetName, "B5", internal.FormatTime(averageTrainingLenght))
+	stats.SetCellValue(sheetName, "A7", "МАКСИМАЛЬНЫЙ СТРИК")
+	stats.SetCellValue(sheetName, "B7", "TODO")
+	stats.SetCellValue(sheetName, "A9", "СРЕДНЕЕ КОЛИЧЕСТВО УПРАЖНЕНИЙ ЗА ТРЕНИРОВКУ")
+	stats.SetCellValue(sheetName, "B7", averageExercisesPerTraining)
+	stats.SetCellValue(sheetName, "A11", "СРЕДНЕЕ КОЛИЧЕСТВО СЭТОВ ЗА ТРЕНИРОВКУ")
+	stats.SetCellValue(sheetName, "A13", "САМОЕ ПОПУЛЯРНОЕ УПРАЖНЕНИЕ")
+	stats.SetCellValue(sheetName, "A15", "САМОЕ НЕПОПУЛЯРНОЕ УПРАЖНЕНИЕ ")
+	stats.SetCellValue(sheetName, "A17", "СТАТИСТИКА ПО КАЖДОМУ УПРАЖНЕНИЮ")
+
 }

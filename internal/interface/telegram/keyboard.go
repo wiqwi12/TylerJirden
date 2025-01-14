@@ -36,6 +36,31 @@ var (
 		Text: "Выбрать упражнение",
 		Data: "choose_exercise",
 	}
+
+	btnStats = telebot.InlineButton{
+		Text: "Показать статистику",
+		Data: "show_stats",
+	}
+
+	btnExerciseStats = telebot.InlineButton{
+		Text: "Статистика по упражненям",
+		Data: "show_exercise_stats",
+	}
+
+	btnTrainingStats = telebot.InlineButton{
+		Text: "Статистика по тренировкам",
+		Data: "show_training_stats",
+	}
+
+	btnStatsByWeek = telebot.InlineButton{
+		Text: "Статистика за неделю",
+		Data: "show_stats_by_week",
+	}
+
+	btnStatsByMonth = telebot.InlineButton{
+		Text: "Статистика не месяц",
+		Data: "show_stats_by_month",
+	}
 )
 
 func StartKeyboard() *telebot.ReplyMarkup {
@@ -76,7 +101,86 @@ func ChooseKeyboard() *telebot.ReplyMarkup {
 	}
 }
 
+func StatsKeyboardMain() *telebot.ReplyMarkup {
+	return &telebot.ReplyMarkup{
+		InlineKeyboard: [][]telebot.InlineButton{
+			{btnExerciseStats}, {btnTrainingStats},
+		},
+	}
+}
+
+func TrainingsStatsKeyboard() *telebot.ReplyMarkup {
+	return &telebot.ReplyMarkup{
+		InlineKeyboard: [][]telebot.InlineButton{
+			{btnStatsByWeek, btnStatsByMonth, btnStatsByMonth},
+		},
+	}
+}
+
+func ExercisesStatsKeyboard() *telebot.ReplyMarkup {
+	return &telebot.ReplyMarkup{
+		InlineKeyboard: [][]telebot.InlineButton{
+			{btnStatsByWeek, btnStatsByMonth, btnStatsByMonth},
+		},
+	}
+}
+
 func (b *BotHandler) PagKeyboard(id, current_page int64) *telebot.ReplyMarkup {
+
+	var (
+		nexBtn = telebot.InlineButton{
+			Text: "Next",
+			Data: fmt.Sprintf("next_%d", current_page+1),
+		}
+
+		prevBtn = telebot.InlineButton{
+			Text: "Previous",
+			Data: fmt.Sprintf("prev_%d", current_page-1),
+		}
+	)
+
+	page, err := b.Service.Repo.GetPage(id, current_page)
+	if err != nil {
+		slog.Error("GetPage err:", err)
+	}
+
+	var exerciseBtns []telebot.InlineButton
+	for _, exercise := range page {
+		exerciseBtns = append(exerciseBtns, telebot.InlineButton{
+			Text: exercise,
+			Data: fmt.Sprintf("exercise_%s", exercise),
+		})
+	}
+
+	rows := [][]telebot.InlineButton{}
+	for _, btn := range exerciseBtns {
+		rows = append(rows, []telebot.InlineButton{btn})
+	}
+
+	maxPage, err := b.Service.Repo.MaxPages(id)
+	if err != nil {
+		slog.Error("GetMaxPages err:", err)
+	}
+
+	if current_page == 1 && current_page != maxPage {
+		rows = append(rows, []telebot.InlineButton{nexBtn})
+	} else if current_page == maxPage && current_page != 1 {
+		rows = append(rows, []telebot.InlineButton{prevBtn})
+	} else if current_page == maxPage && current_page == 1 {
+		slog.Info("Keyboard rows generated", slog.Any("Rows", rows))
+		return &telebot.ReplyMarkup{
+			InlineKeyboard: rows,
+		}
+	} else {
+		rows = append(rows, []telebot.InlineButton{prevBtn, nexBtn})
+	}
+
+	return &telebot.ReplyMarkup{
+		InlineKeyboard: rows,
+	}
+}
+
+func (b *BotHandler) StatsPagKeyboard(id, current_page int64) *telebot.ReplyMarkup {
 
 	var (
 		nexBtn = telebot.InlineButton{
