@@ -697,27 +697,71 @@ func (u *UserRepositoryDB) GetAverageExercisesPerTraining(id int64) (float64, er
 
 }
 
-func (u *UserRepositoryDB) GenerateExelStats(id int64, user_name string) (excelize.File, error) {
+func (u *UserRepositoryDB) GetAverageSetsPerTraining(id int64) (float64, error) {
+	trainings, err := u.GetTrainings(id)
+	if err != nil {
+		slog.Error("GetTrainings Error:", err)
+		return 0, err
+	}
+
+	var count []int64
+
+	for _, training := range trainings {
+		q := squirrel.Select("COUNT(*)").From("sets").Where(
+			squirrel.And{
+				squirrel.Eq{"user_id": training.User_id},
+				squirrel.GtOrEq{"start_time": training.Start},
+				squirrel.LtOrEq{"end_time": training.End},
+			})
+
+		query, args, err := q.ToSql()
+		if err != nil {
+			slog.Error("GetSetsCount Error:", err)
+			return 0, err
+		}
+
+		var c int64
+		err = u.Db.QueryRow(query, args...).Scan(&c)
+		if err != nil {
+			slog.Error("GetSetsCount QueryRow Error:", err)
+			return 0, err
+		}
+
+		count = append(count, c)
+
+	}
+
+	var result float64
+
+	for _, v := range count {
+		result += float64(v)
+	}
+
+	return result / float64(len(count)), nil
+}
+
+func (u *UserRepositoryDB) GenerateExelStats(id int64, user_name string) (*excelize.File, error) {
 	stats := excelize.NewFile()
 
 	defer func() {
 		if err := stats.Close(); err != nil {
 			slog.Info("Stats file close err:", err)
 		}
-	}
+
+	}()
 
 	sheetName := fmt.Sprintf("Статистика %s", user_name)
 
 	_, err := stats.NewSheet(sheetName)
 	if err != nil {
 		fmt.Println(err)
-		return excelize.File{}, err
+		return nil, err
 	}
 
 	trainings, err := u.GetTrainings(id)
 	if err != nil {
 		slog.Error("GetTrainings Error:", err)
-		return excelize.File{}, err
+		return nil, err
 	}
 
 	startDate := internal.FormatDate(trainings[0].Start)
@@ -726,16 +770,32 @@ func (u *UserRepositoryDB) GenerateExelStats(id int64, user_name string) (exceli
 	averageTrainingLenght, err := u.GetAverageTrainingsLenght(id)
 	if err != nil {
 		slog.Error("GetAverageTrainingsLenght Error:", err)
-		return excelize.File{}, err
+		return nil, err
 	}
 
 	averageExercisesPerTraining, err := u.GetAverageExercisesPerTraining(id)
 	if err != nil {
 		slog.Error("GetAverageExercisesPerTraining Error:", err)
-		return excelize.File{}, err
+		return nil, err
 	}
 
 	averageSetsPerTraining, err := u.GetAverageSetsPerTraining(id)
+	if err != nil {
+		slog.Error("GetAverageSetsPerTraining Error:", err)
+		return nil, err
+	}
+
+	MostPopularExercise, err := u.GetMostPopularExercise(id)
+	if err != nil {
+		slog.Error("GetMostPopularExercise Error:", err)
+		return nil, err
+	}
+
+	LeastPopularExercise, err := u.GetLeastPopularExercise(id)
+	if err != nil {
+		slog.Error("GetLeastPopularExercise Error:", err)
+		return nil, err
+	}
 
 	stats.SetCellValue(sheetName, "A3", fmt.Sprintf("Количество тренрировок за с %s по %s", startDate, endDate))
 	stats.SetCellValue(sheetName, "B3", len(trainings))
@@ -744,10 +804,63 @@ func (u *UserRepositoryDB) GenerateExelStats(id int64, user_name string) (exceli
 	stats.SetCellValue(sheetName, "A7", "МАКСИМАЛЬНЫЙ СТРИК")
 	stats.SetCellValue(sheetName, "B7", "TODO")
 	stats.SetCellValue(sheetName, "A9", "СРЕДНЕЕ КОЛИЧЕСТВО УПРАЖНЕНИЙ ЗА ТРЕНИРОВКУ")
-	stats.SetCellValue(sheetName, "B7", averageExercisesPerTraining)
+	stats.SetCellValue(sheetName, "B9", averageExercisesPerTraining)
 	stats.SetCellValue(sheetName, "A11", "СРЕДНЕЕ КОЛИЧЕСТВО СЭТОВ ЗА ТРЕНИРОВКУ")
+	stats.SetCellValue(sheetName, "B11", averageSetsPerTraining)
 	stats.SetCellValue(sheetName, "A13", "САМОЕ ПОПУЛЯРНОЕ УПРАЖНЕНИЕ")
+	stats.SetCellValue(sheetName, "B13", MostPopularExercise)
 	stats.SetCellValue(sheetName, "A15", "САМОЕ НЕПОПУЛЯРНОЕ УПРАЖНЕНИЕ ")
+	stats.SetCellValue(sheetName, "B15", LeastPopularExercise)
 	stats.SetCellValue(sheetName, "A17", "СТАТИСТИКА ПО КАЖДОМУ УПРАЖНЕНИЮ")
+	stats.SetCellValue(sheetName, "A18", "НАЗВАНИЕ УПРАЖНЕНИЯ")
+	stats.SetCellValue(sheetName, "B18", "СЭТОВ БЫЛО СДЕЛАНО ЗА ВСЕ ВРЕМЯ")
+	stats.SetCellValue(sheetName, "C18", "СРЕДНЕЕ КОЛИЧЕСТВО СЭТОВ ЗА ТРЕНИРОВКУ")
+	stats.SetCellValue(sheetName, "D18", "СРЕДНИЙ ВЕС")
+	stats.SetCellValue(sheetName, "D18", "СРЕДНЕЕ КОЛИЧЕСТВО ПОВТОРЕНИЙ")
+
+	exercices, err := u.GetExercises(id)
+	if err != nil {
+		slog.Error("GetExercises Error:", err)
+		return nil, err
+	}
+
+	for i := 19; i < 19+len(exercices); i++ {
+		stats.SetCellValue(sheetName, fmt.Sprintf("A%d", i), exercices[i])
+
+		totalsets, err := u.GetTotalSetsPerExercise(id, exercices[i])
+		if err != nil {
+			slog.Error("GetTotalSetsPerExercise Error:", err)
+			stats.SetCellValue(sheetName, fmt.Sprintf("B%d", i), "NO DATA")
+		} else {
+			stats.SetCellValue(sheetName, fmt.Sprintf("B%d", i), totalsets)
+		}
+
+		averageSetsPerExerise, err := u.GetAverageSetsPerExerise(id, exercices[i])
+		if err != nil {
+			slog.Error("GetAverageSetsPerExercise Error:", err)
+			stats.SetCellValue(sheetName, fmt.Sprintf("C%d", i), "NO DATA")
+		} else {
+			stats.SetCellValue(sheetName, fmt.Sprintf("C%d", i), averageSetsPerExerise)
+		}
+
+		averageweight, err := u.GetAverageWeight(id, exercices[i])
+		if err != nil {
+			slog.Error("GetAverageWeights Error:", err)
+			stats.SetCellValue(sheetName, fmt.Sprintf("D%d", i), "NO DATA")
+		} else {
+			stats.SetCellValue(sheetName, fmt.Sprintf("D%d", i), averageweight)
+		}
+
+		averagereps, err := u.GetAverageReps(id, exercices[i])
+		if err != nil {
+			slog.Error("GetAverageReps Error:", err)
+			stats.SetCellValue(sheetName, fmt.Sprintf("E%d", i), "NO DATA")
+		} else {
+			stats.SetCellValue(sheetName, fmt.Sprintf("E%d", i), averagereps)
+		}
+
+	}
+
+	return stats, nil
 
 }

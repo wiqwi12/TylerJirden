@@ -5,15 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9446e2bc-ca62-46a3-ac6f-9b0fcfdd9e92" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/internal/domain/entity/stats.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/internal/format.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/go.mod" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/go.sum" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/analitycs/chart_generation.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/domain/entity/entity.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/domain/entity/entity.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/domain/repository/repo.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/domain/repository/repo.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/format.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/format.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/infrastructure/postgres/DBHandler.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/infrastructure/postgres/DBHandler.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/interface/telegram/hanlders.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/interface/telegram/hanlders.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/interface/telegram/keyboard.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/interface/telegram/keyboard.go" afterDir="false" />

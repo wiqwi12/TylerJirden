@@ -266,3 +266,23 @@ func (b *BotHandler) AddExerciseHandler(c telebot.Context) error {
 	return nil
 
 }
+
+func (b *BotHandler) StatsHandler(c telebot.Context) error {
+
+	stats, err := b.Service.Repo.GenerateExelStats(c.Sender().ID, fmt.Sprintf("%s %s", c.Sender().FirstName, c.Sender().LastName))
+	if err != nil {
+		c.Send("Произошла ошибка, попробуйте позже")
+		slog.Error("stats error:", err)
+	}
+
+	err = stats.SaveAs(fmt.Sprintf("%s stats", c.Sender().FirstName))
+	if err != nil {
+		slog.Error("stats error:", err)
+		return err
+	}
+
+	c.Send(stats)
+
+	return nil
+
+}

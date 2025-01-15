@@ -41,32 +41,13 @@ var (
 		Text: "Показать статистику",
 		Data: "show_stats",
 	}
-
-	btnExerciseStats = telebot.InlineButton{
-		Text: "Статистика по упражненям",
-		Data: "show_exercise_stats",
-	}
-
-	btnTrainingStats = telebot.InlineButton{
-		Text: "Статистика по тренировкам",
-		Data: "show_training_stats",
-	}
-
-	btnStatsByWeek = telebot.InlineButton{
-		Text: "Статистика за неделю",
-		Data: "show_stats_by_week",
-	}
-
-	btnStatsByMonth = telebot.InlineButton{
-		Text: "Статистика не месяц",
-		Data: "show_stats_by_month",
-	}
 )
 
 func StartKeyboard() *telebot.ReplyMarkup {
 	return &telebot.ReplyMarkup{
 		InlineKeyboard: [][]telebot.InlineButton{
 			{btnStartTraining}, {btnAdd},
+			{btnStats},
 		}}
 }
 
@@ -97,30 +78,6 @@ func ChooseKeyboard() *telebot.ReplyMarkup {
 	return &telebot.ReplyMarkup{
 		InlineKeyboard: [][]telebot.InlineButton{
 			{btnChooseExercise},
-		},
-	}
-}
-
-func StatsKeyboardMain() *telebot.ReplyMarkup {
-	return &telebot.ReplyMarkup{
-		InlineKeyboard: [][]telebot.InlineButton{
-			{btnExerciseStats}, {btnTrainingStats},
-		},
-	}
-}
-
-func TrainingsStatsKeyboard() *telebot.ReplyMarkup {
-	return &telebot.ReplyMarkup{
-		InlineKeyboard: [][]telebot.InlineButton{
-			{btnStatsByWeek, btnStatsByMonth, btnStatsByMonth},
-		},
-	}
-}
-
-func ExercisesStatsKeyboard() *telebot.ReplyMarkup {
-	return &telebot.ReplyMarkup{
-		InlineKeyboard: [][]telebot.InlineButton{
-			{btnStatsByWeek, btnStatsByMonth, btnStatsByMonth},
 		},
 	}
 }

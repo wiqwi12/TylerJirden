@@ -32,7 +32,7 @@ type UserRepository interface {
 	GetAverageSetsPerTraining(id int64) (float64, error) //Среднее колличество сэтов за тренировку
 	GetTrainings(id int64) ([]domain.Training, error)
 	GetExercises(id int64) ([]string, error)
-	GetSetsCount(training domain.Training) (int64, error)
-	GenerateExelStats(id int64) (excelize.File, error)
+	GetSetsCount(training domain.Training, exercise string) (int64, error)
 	GetAverageExercisesPerTraining(id int64) (float64, error)
+	GenerateExelStats(id int64, user_name string) (*excelize.File, error)
 }
