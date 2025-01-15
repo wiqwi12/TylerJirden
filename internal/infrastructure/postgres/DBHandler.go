@@ -740,7 +740,7 @@ func (u *UserRepositoryDB) GetAverageSetsPerTraining(id int64) (float64, error) 
 	return result / float64(len(count)), nil
 }
 
-func (u *UserRepositoryDB) GenerateExelStats(id int64, user_name string) (*excelize.File, error) {
+func (u *UserRepositoryDB) GenerateExelStats(id int64, userName string) (string, error) {
 	stats := excelize.NewFile()
 
 	defer func() {
@@ -750,18 +750,18 @@ func (u *UserRepositoryDB) GenerateExelStats(id int64, user_name string) (*excel
 
 	}()
 
-	sheetName := fmt.Sprintf("Статистика %s", user_name)
+	sheetName := fmt.Sprintf("Статистика %s", userName)
 
 	_, err := stats.NewSheet(sheetName)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return "", err
 	}
 
 	trainings, err := u.GetTrainings(id)
 	if err != nil {
 		slog.Error("GetTrainings Error:", err)
-		return nil, err
+		return "", err
 	}
 
 	startDate := internal.FormatDate(trainings[0].Start)
@@ -770,31 +770,31 @@ func (u *UserRepositoryDB) GenerateExelStats(id int64, user_name string) (*excel
 	averageTrainingLenght, err := u.GetAverageTrainingsLenght(id)
 	if err != nil {
 		slog.Error("GetAverageTrainingsLenght Error:", err)
-		return nil, err
+		return "", err
 	}
 
 	averageExercisesPerTraining, err := u.GetAverageExercisesPerTraining(id)
 	if err != nil {
 		slog.Error("GetAverageExercisesPerTraining Error:", err)
-		return nil, err
+		return "", err
 	}
 
 	averageSetsPerTraining, err := u.GetAverageSetsPerTraining(id)
 	if err != nil {
 		slog.Error("GetAverageSetsPerTraining Error:", err)
-		return nil, err
+		return "", err
 	}
 
 	MostPopularExercise, err := u.GetMostPopularExercise(id)
 	if err != nil {
 		slog.Error("GetMostPopularExercise Error:", err)
-		return nil, err
+		return "", err
 	}
 
 	LeastPopularExercise, err := u.GetLeastPopularExercise(id)
 	if err != nil {
 		slog.Error("GetLeastPopularExercise Error:", err)
-		return nil, err
+		return "", err
 	}
 
 	stats.SetCellValue(sheetName, "A3", fmt.Sprintf("Количество тренрировок за с %s по %s", startDate, endDate))
@@ -821,7 +821,7 @@ func (u *UserRepositoryDB) GenerateExelStats(id int64, user_name string) (*excel
 	exercices, err := u.GetExercises(id)
 	if err != nil {
 		slog.Error("GetExercises Error:", err)
-		return nil, err
+		return "", err
 	}
 
 	for i := 19; i < 19+len(exercices); i++ {
@@ -861,6 +861,13 @@ func (u *UserRepositoryDB) GenerateExelStats(id int64, user_name string) (*excel
 
 	}
 
-	return stats, nil
+	filePath := fmt.Sprintf("%s_stats.xlsx", userName)
+
+	if err := stats.SaveAs(filePath); err != nil {
+		slog.Error("SaveAs Error:", err)
+		return "", err
+	}
+
+	return filePath, nil
 
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gopkg.in/telebot.v3"
 	"log/slog"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -92,7 +93,7 @@ func (b *BotHandler) DataHandler(c telebot.Context) error {
 		case "choose_exercise":
 			c.Edit("Выберите упражнение", b.PagKeyboard(c.Sender().ID, 1))
 		case "show_stats":
-			//хендлер статистики
+			b.StatsHandler(c)
 
 		}
 	}
@@ -269,20 +270,27 @@ func (b *BotHandler) AddExerciseHandler(c telebot.Context) error {
 
 func (b *BotHandler) StatsHandler(c telebot.Context) error {
 
-	stats, err := b.Service.Repo.GenerateExelStats(c.Sender().ID, fmt.Sprintf("%s %s", c.Sender().FirstName, c.Sender().LastName))
+	filePath, err := b.Service.Repo.GenerateExelStats(c.Sender().ID, c.Sender().Username)
 	if err != nil {
-		c.Send("Произошла ошибка, попробуйте позже")
-		slog.Error("stats error:", err)
-	}
-
-	err = stats.SaveAs(fmt.Sprintf("%s stats", c.Sender().FirstName))
-	if err != nil {
-		slog.Error("stats error:", err)
+		slog.Error("generate exel stats error:", err)
 		return err
 	}
 
-	c.Send(stats)
+	file, err := os.Open(filePath)
+	if err != nil {
+		slog.Error("open exel stats error:", err)
+		return err
+	}
 
+	defer file.Close()
+
+	doc := &telebot.Document{
+		File:     telebot.FromReader(file),
+		FileName: filePath,
+	}
+
+	c.Send(doc)
+	
 	return nil
 
 }

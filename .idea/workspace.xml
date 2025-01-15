@@ -7,10 +7,8 @@
     <list default="true" id="9446e2bc-ca62-46a3-ac6f-9b0fcfdd9e92" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/domain/repository/repo.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/domain/repository/repo.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/format.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/format.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/infrastructure/postgres/DBHandler.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/infrastructure/postgres/DBHandler.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/interface/telegram/hanlders.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/interface/telegram/hanlders.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/interface/telegram/keyboard.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/interface/telegram/keyboard.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -88,7 +86,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/internal/interface/telegram/hanlders.go</url>
-          <line>83</line>
+          <line>84</line>
           <option name="timeStamp" value="1" />
         </line-breakpoint>
       </breakpoints>

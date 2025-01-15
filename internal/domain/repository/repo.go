@@ -2,7 +2,6 @@ package repository
 
 import (
 	domain "GymBot/internal/domain/entity"
-	"github.com/xuri/excelize/v2"
 	"time"
 )
 
@@ -34,5 +33,5 @@ type UserRepository interface {
 	GetExercises(id int64) ([]string, error)
 	GetSetsCount(training domain.Training, exercise string) (int64, error)
 	GetAverageExercisesPerTraining(id int64) (float64, error)
-	GenerateExelStats(id int64, user_name string) (*excelize.File, error)
+	GenerateExelStats(id int64, userName string) (string, error)
 }
