@@ -24,14 +24,15 @@ type UserRepository interface {
 	GetMostPopularExercise(id int64) (string, error)
 	GetLeastPopularExercise(id int64) (string, error)
 	GetAverageWeight(id int64, exercise string) (float64, error)
-	GetAverageReps(id int64, exercise string) (int, error)
-	GetAverageTrainingsLenght(id int64) (time.Time, error)
+	GetAverageReps(id int64, exercise string) (string, error)
+	GetAverageTrainingsLenght(id int64) (time.Duration, error)
 	GetTrainingsCount(id int64) (int64, error)
 	GetTotalSetsPerExercise(id int64, exercise string) (int64, error)
 	GetAverageSetsPerTraining(id int64) (float64, error) //Среднее колличество сэтов за тренировку
 	GetTrainings(id int64) ([]domain.Training, error)
 	GetExercises(id int64) ([]string, error)
-	GetSetsCount(training domain.Training, exercise string) (int64, error)
+	GetSetsCount(training domain.Training, exercise string) (int, error)
 	GetAverageExercisesPerTraining(id int64) (float64, error)
 	GenerateExelStats(id int64, userName string) (string, error)
+	GetAverageSetsPerExerise(id int64, exercise string) (string, error)
 }

@@ -17,8 +17,7 @@ const (
 )
 
 var (
-	repsRegexp = regexp.MustCompile(repsRegex)
-
+	repsRegexp   = regexp.MustCompile(repsRegex)
 	weightRegexp = regexp.MustCompile(weightRegex)
 )
 
@@ -48,6 +47,8 @@ func (b *BotHandler) MsgMainHandler(c telebot.Context) error {
 }
 
 func (b *BotHandler) DataHandler(c telebot.Context) error {
+
+	var err error
 	data := c.Data()
 
 	switch {
@@ -73,29 +74,37 @@ func (b *BotHandler) DataHandler(c telebot.Context) error {
 
 		exercise := strings.TrimPrefix(data, "exercise_")
 
-		b.Service.Repo.SetExercise(c.Sender().ID, exercise)
+		err := b.Service.Repo.SetExercise(c.Sender().ID, exercise)
+		if err != nil {
+			slog.Error("Set exercise:", err)
+		}
 
 		c.Edit("Упражнение выбрано! Можете начинать!", TrainingKeyboardWithExerciseChosen())
 
 	default:
 		switch data {
 		case "start_training":
-			b.StartTrainingHandler(c)
+			err = b.StartTrainingHandler(c)
 		case "add_exercise":
 			c.Send("Введите упражнение")
 			c.Bot().Handle(telebot.OnText, b.AddExerciseHandler)
 		case "end_training":
-			b.EndTrainingHandler(c)
+			err = b.EndTrainingHandler(c)
 		case "start_set":
-			b.StartSetHandler(c)
+			err = b.StartSetHandler(c)
 		case "end_set":
-			b.EndSetHandler(c)
+			err = b.EndSetHandler(c)
 		case "choose_exercise":
-			c.Edit("Выберите упражнение", b.PagKeyboard(c.Sender().ID, 1))
+			err = c.Edit("Выберите упражнение", b.PagKeyboard(c.Sender().ID, 1))
 		case "show_stats":
-			b.StatsHandler(c)
+			err = b.StatsHandler(c)
 
 		}
+	}
+
+	if err != nil {
+		slog.Error("Error in Data Handler:", err)
+		return err
 	}
 
 	return nil
@@ -123,7 +132,7 @@ func (b *BotHandler) StartHandler(c telebot.Context) error {
 	} else {
 		c.Send("Неизвестная команда", StartKeyboard())
 	}
-	return err
+	return nil
 }
 
 func (b *BotHandler) StartTrainingHandler(c telebot.Context) error {
@@ -176,6 +185,7 @@ func (b *BotHandler) StartSetHandler(c telebot.Context) error {
 }
 
 func (b *BotHandler) EndSetHandler(c telebot.Context) error {
+
 	b.Service.Repo.EndSet(c.Sender().ID, c.Message().Time())
 
 	c.Send("Сэт завершен! Введите вес, который вы использовали.")
@@ -190,8 +200,6 @@ func (b *BotHandler) WeightHandler(c telebot.Context) error {
 	msg := strings.ReplaceAll(c.Message().Text, ",", ".")
 
 	if weightRegexp.MatchString(msg) {
-
-		slog.AnyValue("Вошло в иф")
 
 		weight, err := strconv.ParseFloat(msg, 64)
 		if err != nil {
@@ -210,7 +218,6 @@ func (b *BotHandler) WeightHandler(c telebot.Context) error {
 		c.Bot().Handle(telebot.OnText, b.RepsHandler)
 
 	} else if !weightRegexp.MatchString(msg) {
-		slog.AnyValue("вошло в элс")
 
 		c.Send("Ошибка ввода веса. Пожалуйста, введите число c одной цифрой после запятой(точка тож сойдет).")
 
@@ -290,7 +297,7 @@ func (b *BotHandler) StatsHandler(c telebot.Context) error {
 	}
 
 	c.Send(doc)
-	
+
 	return nil
 
 }
